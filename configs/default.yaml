@@ -1,0 +1,4 @@
+dataset: "hms-harmful-brain-activity-classification"
+additional_dataset:
+  path: "cdeotte/brain-spectrograms"
+  name: "brain-spectrograms"
