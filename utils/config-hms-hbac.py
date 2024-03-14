@@ -22,9 +22,9 @@ class Config:
                  image_size: tuple[int, int]=[400, 300],
                  epochs: int=13,
                  lr_mode: str="cos"):
-        this.seed = seed
-        this.pretrained_model = pretrained_model
-        this.image_size = image_size
-        this.epochs = epochs
-        this.batch_size = batch_size
-        this.lr_mode = lr_mode
+        self.seed = seed
+        self.pretrained_model = pretrained_model
+        self.image_size = image_size
+        self.epochs = epochs
+        self.batch_size = batch_size
+        self.lr_mode = lr_mode
