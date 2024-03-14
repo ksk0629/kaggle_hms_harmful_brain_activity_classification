@@ -21,6 +21,7 @@ class Config:
                  pretrained_model: str="efficientnetv2_b2_imagenet",
                  image_size: tuple[int, int]=[400, 300],
                  epochs: int=13,
+                 batch_size: int=64,
                  lr_mode: str="cos"):
         self.seed = seed
         self.pretrained_model = pretrained_model
