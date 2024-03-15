@@ -186,7 +186,7 @@ class DataHandler():
         self.train_df["fold"] = -1
         self.train_df.reset_index(drop=True, inplace=True)
         for fold, (train_idx, valid_idx) in enumerate(
-            sgkf.split(df, y=self.train_df["class_label"], groups=self.train_df["patient_id"])
+            sgkf.split(self.train_df, y=self.train_df["class_label"], groups=self.train_df["patient_id"])
         ):
             self.train_df.loc[valid_idx, "fold"] = fold
 
