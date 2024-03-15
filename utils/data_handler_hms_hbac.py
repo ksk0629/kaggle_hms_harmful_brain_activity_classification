@@ -155,7 +155,7 @@ class DataHandler():
     
     def __set_train_and_validation_ds(self):
         """Set train and validation datasets."""
-        if not self.train_df:
+        if self.train_df is None:
             return
         
         sample_df = self.train_df.groupby("spectrogram_id").head(1).reset_index(drop=True)
@@ -178,7 +178,7 @@ class DataHandler():
 
     def __split_train_df(self):
         """Split train dataframe."""
-        if not self.train_df:
+        if self.train_df is None:
             return
 
         sgkf = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=self.config.seed)
