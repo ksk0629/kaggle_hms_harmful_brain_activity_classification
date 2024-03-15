@@ -136,8 +136,8 @@ class DataHandler():
         train_df['eeg_path'] = f'{self.base_path}/train_eegs/' + train_df['eeg_id'].astype(str) + '.parquet'
         train_df['spec_path'] = f'{self.base_path}/train_spectrograms/' + train_df['spectrogram_id'].astype(str) + '.parquet'
         train_df['spec2_path'] = f'{self.spec_dir_path}/train_spectrograms/' + train_df['spectrogram_id'].astype(str) + '.npy'
-        train_df['class_name'] = df.expert_consensus.copy()
-        train_df['class_label'] = df.expert_consensus.map(self.config.name2label)
+        train_df['class_name'] = train_df.expert_consensus.copy()
+        train_df['class_label'] = train_df.expert_consensus.map(self.config.name2label)
         self.train_df = train_df
 
     def __set_test_df(self):
