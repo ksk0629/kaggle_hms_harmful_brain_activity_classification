@@ -12,7 +12,7 @@ from config_hms_hbac import Config
 class DataHandler():
     def __init__(self, config: Config):
         self.base_path = "/kaggle/input/hms-harmful-brain-activity-classification"
-        self.spec_dir_path = "hms-hbac"
+        self.spec_dir_path = "/kaggle/input/hms-hbac"
         self.config = config
         self.train_df = None
         self.test_df = None
@@ -167,14 +167,14 @@ class DataHandler():
         train_offsets = train_df.spectrogram_label_offset_seconds.values.astype(int)
         train_labels = train_df.class_label.values
         self.train_ds = self.__get_dataset(train_paths, train_offsets, train_labels, batch_size=self.config.batch_size,
-                                         repeat=True, shuffle=True, augment=True, cache=True)
+                                           repeat=True, shuffle=True, augment=True, cache=True)
 
         # Valid
         valid_paths = valid_df.spec2_path.values
         valid_offsets = valid_df.spectrogram_label_offset_seconds.values.astype(int)
         valid_labels = valid_df.class_label.values
         self.valid_ds = self.__get_dataset(valid_paths, valid_offsets, valid_labels, batch_size=self.config.batch_size,
-                                         repeat=False, shuffle=False, augment=False, cache=True)
+                                           repeat=False, shuffle=False, augment=False, cache=True)
 
     def __split_train_df(self):
         """Split train dataframe."""
