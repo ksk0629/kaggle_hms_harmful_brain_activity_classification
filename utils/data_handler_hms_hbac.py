@@ -12,7 +12,7 @@ from config_hms_hbac import Config
 class DataHandler():
     def __init__(self, config: Config):
         self.base_path = "/kaggle/input/hms-harmful-brain-activity-classification"
-        self.spec_dir_path = "/kaggle/input/hms-hbac"
+        self.spec_dir_path = "/kaggle/input/hms-hbac-spectrograms-npy/hms-hbac"
         self.config = config
         self.train_df = None
         self.test_df = None
