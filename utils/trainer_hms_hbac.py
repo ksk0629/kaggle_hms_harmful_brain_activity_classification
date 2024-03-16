@@ -32,13 +32,13 @@ class Trainer():
         lr_start, lr_max, lr_min = 5e-5, 6e-6 * self.config.batch_size, 1e-5
         lr_ramp_ep, lr_sus_ep, lr_decay = 3, 0, 0.75
 
-        def lrfn():  # Learning rate update function
-            if self.config.epoch < lr_ramp_ep: lr = (lr_max - lr_start) / lr_ramp_ep * epoch + lr_start
-            elif self.config.epoch < lr_ramp_ep + lr_sus_ep: lr = lr_max
-            elif self.config.lr_mode == 'exp': lr = (lr_max - lr_min) * lr_decay**(self.config.epoch - lr_ramp_ep - lr_sus_ep) + lr_min
-            elif self.config.lr_mode == 'step': lr = lr_max * lr_decay**((self.config.epoch - lr_ramp_ep - lr_sus_ep) // 2)
+        def lrfn(epoch):  # Learning rate update function
+            if epoch < lr_ramp_ep: lr = (lr_max - lr_start) / lr_ramp_ep * epoch + lr_start
+            elif epoch < lr_ramp_ep + lr_sus_ep: lr = lr_max
+            elif self.config.lr_mode == 'exp': lr = (lr_max - lr_min) * lr_decay**(epoch - lr_ramp_ep - lr_sus_ep) + lr_min
+            elif self.config.lr_mode == 'step': lr = lr_max * lr_decay**((epoch - lr_ramp_ep - lr_sus_ep) // 2)
             elif self.config.lr_mode == 'cos':
-                decay_total_epochs, decay_epoch_index = self.config.epochs - lr_ramp_ep - lr_sus_ep + 3, self.config.epoch - lr_ramp_ep - lr_sus_ep
+                decay_total_epochs, decay_epoch_index = self.config.epochs - lr_ramp_ep - lr_sus_ep + 3, epoch - lr_ramp_ep - lr_sus_ep
                 phase = math.pi * decay_epoch_index / decay_total_epochs
                 lr = (lr_max - lr_min) * 0.5 * (1 + math.cos(phase)) + lr_min
             return lr
