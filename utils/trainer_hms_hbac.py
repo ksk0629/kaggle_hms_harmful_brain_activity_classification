@@ -1,9 +1,11 @@
+# %% [code]
 import math
 
 import keras_cv
 import keras
 from keras import ops
 import matplotlib.pyplot as plt
+import numpy as np
 import tensorflow as tf
 
 from config_hms_hbac import Config
