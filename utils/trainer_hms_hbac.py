@@ -86,16 +86,17 @@ class Trainer():
         )
         
 
-if __name__ is "__main__":
-    config = Config(pretrained_model="efficientnetv2_s_imagenet",
-                    image_size=[400, 300],
-                    epochs=1,
-                    batch_size=128,
-                    lr_mode="cos")
-    
-    trainer = Trainer(config)
+# >>> Test >>>
+config = Config(pretrained_model="efficientnetv2_s_imagenet",
+                image_size=[400, 300],
+                epochs=1,
+                batch_size=64,
+                lr_mode="cos")
 
-    trainer.set_model()
-    trainer.compile_model()
-    
-    trainer.set_callbacks()
+trainer = Trainer(config)
+
+trainer.set_model()
+trainer.compile_model()
+
+trainer.set_callbacks()
+# <<< Test <<<
