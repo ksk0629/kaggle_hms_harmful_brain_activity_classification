@@ -12,6 +12,13 @@
     - The total numbers of votes are the same?
     - Expert_consensus is all same over the eeg_id?
 
-## 22/01/2024
+## Discovery
+- Batch size: 512 + GPU 100 -> Did not work (out of memory)
+
+## Contents
+### 16/03/2024
+- 
+
+### 22/01/2024
 - Submitted the baseline with `catboost.ipynb`.
 - Downloaded the paper of CatBoost, but probably should study data first.
