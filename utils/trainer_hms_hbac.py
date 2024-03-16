@@ -3,6 +3,7 @@ import math
 import keras_cv
 import keras
 from keras import ops
+import matplotlib.pyplot as plt
 import tensorflow as tf
 
 from config_hms_hbac import Config
@@ -12,6 +13,8 @@ class Trainer():
     def __init__(self, config):
         self.loss = keras.losses.KLDivergence()
         self.config = config
+        
+        keras.utils.set_random_seed(self.config.seed)
     
     def compile_model(self):
         self.model.compile(optimizer=keras.optimizers.Adam(learning_rate=1e-4), loss=self.loss)
