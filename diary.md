@@ -13,7 +13,7 @@
     - Expert_consensus is all same over the eeg_id?
 
 ## Discovery
-- Batch size: 512 + GPU 100 -> Did not work (out of memory)
+- Batch size: 512 + GPU P100 -> Did not work (out of memory)
 
 ## Contents
 ### 16/03/2024
