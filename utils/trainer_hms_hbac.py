@@ -60,12 +60,12 @@ class Trainer():
     def show_model_summary(self):
         self.model.summary()
     
-    def train(self, train_ds, valid_ds):
+    def train(self, num_train_data, train_ds, valid_ds):
         self.history = self.model.fit(
             train_ds, 
             epochs=self.config.epochs,
             callbacks=[self.lr_callback, self.checkpoint], 
-            steps_per_epoch=len(train_df)//self.config.batch_size,
+            steps_per_epoch=num_train_data//self.config.batch_size,
             validation_data=valid_ds, 
             verbose=self.config.verbose
         )
