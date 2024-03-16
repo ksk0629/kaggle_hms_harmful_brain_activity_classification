@@ -32,7 +32,7 @@ class Trainer():
         lr_start, lr_max, lr_min = 5e-5, 6e-6 * self.config.batch_size, 1e-5
         lr_ramp_ep, lr_sus_ep, lr_decay = 3, 0, 0.75
 
-        def lrfn(epoch):  # Learning rate update function
+        def lrfn():  # Learning rate update function
             if self.config.epoch < lr_ramp_ep: lr = (lr_max - lr_start) / lr_ramp_ep * epoch + lr_start
             elif self.config.epoch < lr_ramp_ep + lr_sus_ep: lr = lr_max
             elif self.config.lr_mode == 'exp': lr = (lr_max - lr_min) * lr_decay**(self.config.epoch - lr_ramp_ep - lr_sus_ep) + lr_min
@@ -45,7 +45,7 @@ class Trainer():
 
         if plot:  # Plot lr curve if plot is True
             plt.figure(figsize=(10, 5))
-            plt.plot(np.arange(epochs), [lrfn(epoch) for epoch in np.arange(epochs)], marker='o')
+            plt.plot(np.arange(self.config.epochs), [lrfn(epoch) for epoch in np.arange(self.config.epochs)], marker='o')
             plt.xlabel('epoch'); plt.ylabel('lr')
             plt.title('LR Scheduler')
             plt.show()
