@@ -1,4 +1,5 @@
 # %% [code]
+# %% [code]
 import math
 
 import keras_cv
@@ -14,21 +15,27 @@ from config_hms_hbac import Config
 class Trainer():
     def __init__(self, config):
         self.loss = keras.losses.KLDivergence()
+        self.monitor_value = "val_loss"
         self.config = config
+        self.callbacks = []
         
         keras.utils.set_random_seed(self.config.seed)
+
+    def add_checkpoint(self, path: str="best_model.keras"):
+        self.callbacks.append(
+            keras.callbacks.ModelCheckpoint(path,
+                                            monitor=self.monitor_value,
+                                            save_best_only=True,
+                                            save_weights_only=False,
+                                            mode='min')
+        )
     
-    def compile_model(self):
-        self.model.compile(optimizer=keras.optimizers.Adam(learning_rate=1e-4), loss=self.loss)
+    def add_early_stopping(self, patience=5):
+        self.callbacks.append(
+            keras.callbacks.EarlyStopping(monitor=self.monitor_value, patience=patience)
+        )
     
-    def set_checkpoint(self, path: str):
-        self.checkpoint = keras.callbacks.ModelCheckpoint(path,
-                                                          monitor='val_loss',
-                                                          save_best_only=True,
-                                                          save_weights_only=False,
-                                                          mode='min')
-    
-    def set_lr_callback(self, plot=False):
+    def add_lr_callback(self, plot=False):
         lr_start, lr_max, lr_min = 5e-5, 6e-6 * self.config.batch_size, 1e-5
         lr_ramp_ep, lr_sus_ep, lr_decay = 3, 0, 0.75
 
@@ -50,7 +57,15 @@ class Trainer():
             plt.title('LR Scheduler')
             plt.show()
 
-        self.lr_callback = keras.callbacks.LearningRateScheduler(lrfn, verbose=False)  # Create lr callback
+        self.callbacks.append(keras.callbacks.LearningRateScheduler(lrfn, verbose=False))        
+
+    def compile_model(self):
+        self.model.compile(optimizer=keras.optimizers.Adam(learning_rate=1e-4), loss=self.loss)
+    
+    def set_callbacks(self):
+        self.add_checkpoint()
+        self.add_early_stopping()
+        self.add_lr_callback()
     
     def set_model(self):
         self.model = keras_cv.models.ImageClassifier.from_preset(
@@ -64,8 +79,23 @@ class Trainer():
         self.history = self.model.fit(
             train_ds, 
             epochs=self.config.epochs,
-            callbacks=[self.lr_callback, self.checkpoint], 
+            callbacks=self.callbacks, 
             steps_per_epoch=num_train_data//self.config.batch_size,
             validation_data=valid_ds, 
             verbose=self.config.verbose
         )
+        
+
+if __name__ is "__main__":
+    config = Config(pretrained_model="efficientnetv2_s_imagenet",
+                    image_size=[400, 300],
+                    epochs=1,
+                    batch_size=128,
+                    lr_mode="cos")
+    
+    trainer = Trainer(config)
+
+    trainer.set_model()
+    trainer.compile_model()
+    
+    trainer.set_callbacks()
