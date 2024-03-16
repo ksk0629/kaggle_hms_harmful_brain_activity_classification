@@ -148,6 +148,12 @@ class DataHandler():
         test_df['spec2_path'] = f'{self.spec_dir_path}/test_spectrograms/' + test_df['spectrogram_id'].astype(str) + '.npy'
         self.test_df = test_df
 
+    def __set_test_ds(self):
+        """Set test dataset."""
+        test_paths = self.test_df.spec2_path.values
+        self.test_ds = self.__get_dataset(test_paths, batch_size=min(self.config.batch_size, len(self.test_df)),
+                                          repeat=False, shuffle=False, cache=False, augment=False)
+        
     def __set_train_and_test_df(self):
         """Set train and test dataframes."""
         self.__set_train_df()
@@ -201,3 +207,4 @@ class DataHandler():
         self.__set_train_and_test_df()
         self.__split_train_df()
         self.__set_train_and_validation_ds()
+        self.__set_test_ds()
