@@ -2,9 +2,11 @@ import os
 
 import joblib
 import keras_cv
+import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedGroupKFold
 import tensorflow as tf
+from tqdm.notebook import tqdm
 
 from config_hms_hbac import Config
 
@@ -12,11 +14,19 @@ from config_hms_hbac import Config
 class DataHandler():
     def __init__(self, config: Config):
         self.base_path = "/kaggle/input/hms-harmful-brain-activity-classification"
-        self.spec_dir_path = "/kaggle/input/hms-hbac-spectrograms-npy/hms-hbac"
+        self.input_npy_dir_path = "/kaggle/input/hms-hbac-spectrograms-npy/hms-hbac"
+        self.tmp_npy_basedir_path = "/kaggle/working/hms-hbca"
         self.config = config
         self.train_df = None
         self.test_df = None
 
+    # >>> Define general functions >>>
+    def __npy_dir_path(self, is_train: bool, npy_base_dir_path: str):
+        if is_train:
+            return npy_base_dir_path + "/train_spectrograms/"
+        else:
+            return npy_base_dir_path + "/test_spectrograms/"
+    
     def __build_augmenter(self, dim=[400, 300]):
         self.augmenters = [
             keras_cv.layers.MixUp(alpha=2.0),
@@ -103,63 +113,57 @@ class DataHandler():
         ds = ds.map(self.augmenter, num_parallel_calls=AUTO) if augment else ds
         ds = ds.prefetch(AUTO)
         return ds
-        
-    def __make_train_and_test_dirs(self) -> tuple[str, str]:
-        """Make directories for storing train and test dataframes."""
-        self.train_dir_path = self.spec_dir_path + '/train_spectrograms'
-        os.makedirs(self.train_dir, exist_ok=True)
-        self.test_dir_path = self.spec_dir_path + '/test_spectrograms'
-        os.makedirs(self.test_dir_path, exist_ok=True)
 
-    def __save_spec_as_npy(self, spec_id, split="train"):
-        """Save spectrogram data, which is originally formatted as parquet, as npy."""
-        spec_path = f"{self.base_path}/{split}_spectrograms/{spec_id}.parquet"
-        spec = pd.read_parquet(spec_path)
-        spec = spec.fillna(0).values[:, 1:].T # fill NaN values with 0, transpose for (Time, Freq) -> (Freq, Time)
-        spec = spec.astype("float32")
-        np.save(f"{self.spec_dir_path}/{split}_spectrograms/{spec_id}.npy", spec)
+    def __make_dir(self, dir_path: str):
+        os.makedirs(dir_path, exist_ok=True)
 
-    def __save_spec_as_npy_parallelly(self, df, name):
+    def __save_spec_as_npy_parallelly(self, df, is_train, npy_base_dir_path):
         """Parallelly save spectrogram data as npy."""
         # Get unique spec_ids of train and valid data
         spec_ids = df["spectrogram_id"].unique()
+        
+        def save_spec_as_npy(spec_id, is_train, npy_base_dir_path):
+            """Save spectrogram data, which is originally formatted as parquet, as npy."""
+            spec_path = f"{self.__npy_dir_path(is_train, self.base_path)}{spec_id}.parquet"
+            spec = pd.read_parquet(spec_path)
+            spec = spec.fillna(0).values[:, 1:].T # fill NaN values with 0, transpose for (Time, Freq) -> (Freq, Time)
+            spec = spec.astype("float32")
+            np.save(f"{self.__npy_dir_path(is_train, npy_base_dir_path)}{spec_id}.npy", spec)
 
         # Parallelize the processing using joblib for training data
         _ = joblib.Parallel(n_jobs=-1, backend="loky")(
-            joblib.delayed(process_spec)(spec_id, name)
+            joblib.delayed(save_spec_as_npy)(spec_id, is_train, npy_base_dir_path)
             for spec_id in tqdm(spec_ids, total=len(spec_ids))
         )
+    # <<< Define general functions <<<
 
-    def __set_train_df(self):
+    # >>> Define train related functions >>>
+    def __set_train_df(self, npy_base_dir_path: str):
         """Set train dataframe."""
         train_df = pd.read_csv(f'{self.base_path}/train.csv')
         train_df['eeg_path'] = f'{self.base_path}/train_eegs/' + train_df['eeg_id'].astype(str) + '.parquet'
         train_df['spec_path'] = f'{self.base_path}/train_spectrograms/' + train_df['spectrogram_id'].astype(str) + '.parquet'
-        train_df['spec2_path'] = f'{self.spec_dir_path}/train_spectrograms/' + train_df['spectrogram_id'].astype(str) + '.npy'
+        npy_dir_path = self.__npy_dir_path(True, npy_base_dir_path)
+        train_df['spec2_path'] = npy_dir_path + train_df['spectrogram_id'].astype(str) + '.npy'
         train_df['class_name'] = train_df.expert_consensus.copy()
         train_df['class_label'] = train_df.expert_consensus.map(self.config.name2label)
         self.train_df = train_df
 
-    def __set_test_df(self):
-        """Set test dataframe."""
-        test_df = pd.read_csv(f'{self.base_path}/test.csv')
-        test_df['eeg_path'] = f'{self.base_path}/test_eegs/' + test_df['eeg_id'].astype(str) + '.parquet'
-        test_df['spec_path'] = f'{self.base_path}/test_spectrograms/' + test_df['spectrogram_id'].astype(str) + '.parquet'
-        test_df['spec2_path'] = f'{self.spec_dir_path}/test_spectrograms/' + test_df['spectrogram_id'].astype(str) + '.npy'
-        self.test_df = test_df
+    def __split_train_df(self):
+        """Split train dataframe."""
+        if self.train_df is None:
+            return
 
-    def __set_test_ds(self):
-        """Set test dataset."""
-        test_paths = self.test_df.spec2_path.values
-        self.test_ds = self.__get_dataset(test_paths, batch_size=min(self.config.batch_size, len(self.test_df)),
-                                          repeat=False, shuffle=False, cache=False, augment=False)
-        
-    def __set_train_and_test_df(self):
-        """Set train and test dataframes."""
-        self.__set_train_df()
-        self.__set_test_df()
-    
-    def __set_train_and_validation_ds(self):
+        sgkf = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=self.config.seed)
+
+        self.train_df["fold"] = -1
+        self.train_df.reset_index(drop=True, inplace=True)
+        for fold, (train_idx, valid_idx) in enumerate(
+            sgkf.split(self.train_df, y=self.train_df["class_label"], groups=self.train_df["patient_id"])
+        ):
+            self.train_df.loc[valid_idx, "fold"] = fold
+
+    def __set_train_and_valid_ds(self):
         """Set train and validation datasets."""
         if self.train_df is None:
             return
@@ -181,30 +185,42 @@ class DataHandler():
         valid_labels = valid_df.class_label.values
         self.valid_ds = self.__get_dataset(valid_paths, valid_offsets, valid_labels, batch_size=self.config.batch_size,
                                            repeat=False, shuffle=False, augment=False, cache=True)
-
-    def __split_train_df(self):
-        """Split train dataframe."""
-        if self.train_df is None:
-            return
-
-        sgkf = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=self.config.seed)
-
-        self.train_df["fold"] = -1
-        self.train_df.reset_index(drop=True, inplace=True)
-        for fold, (train_idx, valid_idx) in enumerate(
-            sgkf.split(self.train_df, y=self.train_df["class_label"], groups=self.train_df["patient_id"])
-        ):
-            self.train_df.loc[valid_idx, "fold"] = fold
-
-    def save_spec_train_and_test_as_npy_parallelly(self):
-        """Parallelly save train and test spectrogram data as npy."""
-        self.set_train_and_test_df()
-        
-        self.__save_spec_as_npy_parallelly(self.train_df, "train")
-        self.__save_spec_as_npy_parallelly(self.test_df, "test")
     
-    def run(self, use_npy: bool):
-        self.__set_train_and_test_df()
+    def prepare_for_training(self, use_input_npy: bool=True):
+        if use_input_npy:
+            base_dir_path = self.input_npy_dir_path
+        else:
+            base_dir_path = self.tmp_npy_basedir_path
+        
+        self.__set_train_df(base_dir_path)
+        
+        if not use_input_npy:
+            self.__make_dir(self.__npy_dir_path(True, base_dir_path))
+            self.__save_spec_as_npy_parallelly(self.train_df, True, base_dir_path)
+        
         self.__split_train_df()
-        self.__set_train_and_validation_ds()
+        self.__set_train_and_valid_ds()
+    # <<< Define train related functions <<<
+    
+    # >>> Define test related functions >>>
+    def __set_test_df(self, npy_base_dir_path: str):
+        """Set test dataframe."""
+        test_df = pd.read_csv(f'{self.base_path}/test.csv')
+        test_df['eeg_path'] = f'{self.base_path}/test_eegs/' + test_df['eeg_id'].astype(str) + '.parquet'
+        test_df['spec_path'] = f'{self.base_path}/test_spectrograms/' + test_df['spectrogram_id'].astype(str) + '.parquet'
+        npy_dir_path = self.__npy_dir_path(False, npy_base_dir_path)
+        test_df['spec2_path'] = npy_dir_path + test_df['spectrogram_id'].astype(str) + '.npy'
+        self.test_df = test_df
+
+    def __set_test_ds(self):
+        """Set test dataset."""
+        test_paths = self.test_df.spec2_path.values
+        self.test_ds = self.__get_dataset(test_paths, batch_size=min(self.config.batch_size, len(self.test_df)),
+                                          repeat=False, shuffle=False, cache=False, augment=False)
+    
+    def prepare_for_test(self):
+        self.__make_dir(self.__npy_dir_path(False, self.tmp_npy_basedir_path))
+        self.__set_test_df(self.tmp_npy_basedir_path)
+        self.__save_spec_as_npy_parallelly(self.test_df, False, self.tmp_npy_basedir_path)
         self.__set_test_ds()
+    # <<< Define test related functions <<<
